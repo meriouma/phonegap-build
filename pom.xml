@@ -4,10 +4,10 @@
 	<parent>
 		<groupId>org.sonatype.oss</groupId>
 		<artifactId>oss-parent</artifactId>
-		<version>7</version>
+		<version>9</version>
 	</parent>
 
-	<groupId>com.github.chrisprice</groupId>
+	<groupId>com.arcbees.maven</groupId>
 	<artifactId>phonegap-build</artifactId>
 	<version>0.0.11-SNAPSHOT</version>
 	<packaging>pom</packaging>

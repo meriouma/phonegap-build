@@ -3,7 +3,6 @@ package com.github.chrisprice.phonegapbuild.plugin;
 import java.io.File;
 import java.util.Arrays;
 
-import com.github.chrisprice.phonegapbuild.api.managers.KeysManager;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -20,6 +19,7 @@ import com.github.chrisprice.phonegapbuild.api.data.me.MeResponse;
 import com.github.chrisprice.phonegapbuild.api.data.resources.App;
 import com.github.chrisprice.phonegapbuild.api.data.resources.Key;
 import com.github.chrisprice.phonegapbuild.api.data.resources.PlatformKeys;
+import com.github.chrisprice.phonegapbuild.api.managers.KeysManager;
 import com.github.chrisprice.phonegapbuild.plugin.utils.AndroidKeyManager;
 import com.github.chrisprice.phonegapbuild.plugin.utils.AppDownloader;
 import com.github.chrisprice.phonegapbuild.plugin.utils.AppUploadPackager;
@@ -30,481 +30,481 @@ import com.sun.jersey.api.client.WebResource;
 /**
  * Compress the exploded package to a zip using the specified filters. Add in the config.xml from
  * src/main/phonegap-build/.
- * 
- * The compressed artifact will then be uploaded to either a pre-existing cloud app instance or a
- * new one depending on whether a stored app id can be found.
- * 
+ * <p>
+ * The compressed artifact will then be uploaded to either a pre-existing cloud app instance or a new one depending on
+ * whether a stored app id can be found.
+ *
  * @goal build
  * @phase package
  * @requiresDependencyResolution compile
  */
 public class BuildMojo extends AbstractPhoneGapBuildMojo {
 
-  /**
-   * @parameter default-value="${project}"
-   * @required
-   * @readonly
-   */
-  private MavenProject project;
+    /**
+     * @parameter default-value="${project}"
+     * @required
+     * @readonly
+     */
+    private MavenProject project;
 
-  /**
-   * Configuration file.
-   * 
-   * @parameter expression="${basedir}/src/main/phonegap-build/config.xml"
-   */
-  private File configFile;
+    /**
+     * Configuration file.
+     *
+     * @parameter expression="${basedir}/src/main/phonegap-build/config.xml"
+     */
+    private File configFile;
 
-  /**
-   * Zip file.
-   * 
-   * @parameter expression="${project.build.finalName}.zip"
-   */
-  private String zipFile;
+    /**
+     * Zip file.
+     *
+     * @parameter expression="${project.build.finalName}.zip"
+     */
+    private String zipFile;
 
-  /**
-   * Working directory.
-   * 
-   * @parameter expression="${project.build.directory}/phonegap-build"
-   * @readonly
-   */
-  private File workingDirectory;
+    /**
+     * Working directory.
+     *
+     * @parameter expression="${project.build.directory}/phonegap-build"
+     * @readonly
+     */
+    private File workingDirectory;
 
-  /**
-   * App id (used in preference to creating a new app)
-   * 
-   * @parameter
-   */
-  private Integer appId;
+    /**
+     * App id (used in preference to creating a new app)
+     *
+     * @parameter
+     */
+    private Integer appId;
 
-  /**
-   * iOS key id (used in preference to uploading an ios key)
-   * 
-   * @parameter
-   */
-  private Integer iOsKeyId;
+    /**
+     * iOS key id (used in preference to uploading an ios key)
+     *
+     * @parameter
+     */
+    private Integer iOsKeyId;
 
-  /**
-   * iOS certificate server id (used in preference to iOsCertificate*)
-   * 
-   * @parameter expression="${phonegap-build.ios.server}"
-   */
-  private String iOsServer;
+    /**
+     * iOS certificate server id (used in preference to iOsCertificate*)
+     *
+     * @parameter expression="${phonegap-build.ios.server}"
+     */
+    private String iOsServer;
 
-  /**
-   * iOS p12 certificate. Deprecated - use iOsServer instead.
-   * 
-   * @parameter expression="${project.build.directory}/phonegap-build/ios.p12"
-   * @deprecated
-   */
-  private File iOsCertificate;
+    /**
+     * iOS p12 certificate. Deprecated - use iOsServer instead.
+     *
+     * @parameter expression="${project.build.directory}/phonegap-build/ios.p12"
+     * @deprecated
+     */
+    private File iOsCertificate;
 
-  /**
-   * iOS certificate password. Deprecated - use iOsServer instead.
-   * 
-   * @parameter expression="${phonegap-build.ios.certificate.password}"
-   * @deprecated
-   */
-  private String iOsCertificatePassword;
+    /**
+     * iOS certificate password. Deprecated - use iOsServer instead.
+     *
+     * @parameter expression="${phonegap-build.ios.certificate.password}"
+     * @deprecated
+     */
+    private String iOsCertificatePassword;
 
-  /**
-   * iOS mobileprovision file
-   * 
-   * @parameter expression="${project.build.directory}/phonegap-build/ios.mobileprovision"
-   */
-  private File iOsMobileProvision;
+    /**
+     * iOS mobileprovision file
+     *
+     * @parameter expression="${project.build.directory}/phonegap-build/ios.mobileprovision"
+     */
+    private File iOsMobileProvision;
 
-  /**
-   * Enable android signing.
-   * 
-   * @parameter default-value="false"
-   */
-  private boolean androidSign;
+    /**
+     * Enable android signing.
+     *
+     * @parameter default-value="false"
+     */
+    private boolean androidSign;
 
-  /**
-   * Android key id (used in preference to uploading an android key)
-   * 
-   * @parameter
-   */
-  private Integer androidKeyId;
+    /**
+     * Android key id (used in preference to uploading an android key)
+     *
+     * @parameter
+     */
+    private Integer androidKeyId;
 
-  /**
-   * Android certificate server id (used in preference to androidCertificate*)
-   * 
-   * @parameter expression="${phonegap-build.android.server}"
-   */
-  private String androidServer;
+    /**
+     * Android certificate server id (used in preference to androidCertificate*)
+     *
+     * @parameter expression="${phonegap-build.android.server}"
+     */
+    private String androidServer;
 
-  /**
-   * Android certificate password. Deprecated - use androidServer instead.
-   * 
-   * @parameter expression="${phonegap-build.android.certificate.password}"
-   * @deprecated
-   */
-  private String androidCertificatePassword;
+    /**
+     * Android certificate password. Deprecated - use androidServer instead.
+     *
+     * @parameter expression="${phonegap-build.android.certificate.password}"
+     * @deprecated
+     */
+    private String androidCertificatePassword;
 
-  /**
-   * Android keystore. Deprecated - use androidServer instead.
-   * 
-   * @parameter expression="${project.build.directory}/phonegap-build/android.keystore"
-   * @deprecated
-   */
-  private File androidKeystore;
+    /**
+     * Android keystore. Deprecated - use androidServer instead.
+     *
+     * @parameter expression="${project.build.directory}/phonegap-build/android.keystore"
+     * @deprecated
+     */
+    private File androidKeystore;
 
-  /**
-   * Android keystore password. Deprecated - use androidServer instead.
-   * 
-   * @parameter expression="${phonegap-build.android.keystore.password}"
-   * @deprecated
-   */
-  private String androidKeystorePassword;
+    /**
+     * Android keystore password. Deprecated - use androidServer instead.
+     *
+     * @parameter expression="${phonegap-build.android.keystore.password}"
+     * @deprecated
+     */
+    private String androidKeystorePassword;
 
-  /**
-   * Android keystore certificate alias. Deprecated - use androidServer instead.
-   * 
-   * @parameter expression="${phonegap-build.android.certificate.alias}"
-   * @deprecated
-   */
-  private String androidCertificateAlias;
+    /**
+     * Android keystore certificate alias. Deprecated - use androidServer instead.
+     *
+     * @parameter expression="${phonegap-build.android.certificate.alias}"
+     * @deprecated
+     */
+    private String androidCertificateAlias;
 
-  /**
-   * A comma delimited string of artifact co-ordinates used to filter the dependencies list for key
-   * packages. The co-ordinates should be of the form groupId:artifactId.
-   * 
-   * @parameter
-   */
-  private String keys;
+    /**
+     * A comma delimited string of artifact co-ordinates used to filter the dependencies list for key packages. The
+     * co-ordinates should be of the form groupId:artifactId.
+     *
+     * @parameter
+     */
+    private String keys;
 
-  /**
-   * The application title, defaults to the final name of the app but will be overridden by any
-   * title specified in the config file.
-   * 
-   * @parameter expression="${project.build.finalName}"
-   */
-  private String appTitle;
+    /**
+     * The application title, defaults to the final name of the app but will be overridden by any title specified in the
+     * config file.
+     *
+     * @parameter expression="${project.build.finalName}"
+     */
+    private String appTitle;
 
-  /**
-   * Exploded WAR directory
-   * 
-   * @parameter expression="${project.build.directory}/${project.build.finalName}"
-   */
-  private File warDirectory;
+    /**
+     * Exploded WAR directory
+     *
+     * @parameter expression="${project.build.directory}/${project.build.finalName}"
+     */
+    private File warDirectory;
 
-  /**
-   * A set of file patterns to include in the zip.
-   * 
-   * @parameter
-   */
-  private String[] warIncludes;
+    /**
+     * A set of file patterns to include in the zip.
+     *
+     * @parameter
+     */
+    private String[] warIncludes;
 
-  /**
-   * A set of file patterns to exclude from the zip.
-   * 
-   * Defaults to "WEB-INF&#47;**&#47;*", "WEB-INF"
-   * 
-   * @parameter
-   */
-  private String[] warExcludes = new String[] {"WEB-INF/**/*", "WEB-INF"};
+    /**
+     * A set of file patterns to exclude from the zip.
+     * <p>
+     * Defaults to "WEB-INF&#47;**&#47;*", "WEB-INF"
+     *
+     * @parameter
+     */
+    private String[] warExcludes = new String[]{"WEB-INF/**/*", "WEB-INF"};
 
-  /**
-   * The platforms to build for.
-   * 
-   * Defaults to android, blackberry, ios, symbian, webos and winphone
-   * 
-   * @parameter
-   */
-  private String[] platforms = new String[] {
-      "android", "blackberry", "ios", "symbian", "webos", "winphone"};
+    /**
+     * The platforms to build for.
+     * <p>
+     * Defaults to android, blackberry, ios, symbian, webos and winphone
+     *
+     * @parameter
+     */
+    private String[] platforms = new String[]{
+            "android", "blackberry", "ios", "symbian", "webos", "winphone"};
 
-  /**
-   * Enables debugging.
-   *
-   * @parameter default-value="false"
-   */
-   private boolean deleteAppInPhoneGapBuildAfterBuild;
+    /**
+     * Enables debugging.
+     *
+     * @parameter default-value="false"
+     */
+    private boolean deleteAppInPhoneGapBuildAfterBuild;
 
-  /**
-   * Enables debugging.
-   *
-   * @parameter default-value="false"
-   */
-   private boolean debug;
+    /**
+     * Enables debugging.
+     *
+     * @parameter default-value="false"
+     */
+    private boolean debug;
 
-  /**
-   * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.ResourceIdStore"
-   */
-  private ResourceIdStore<App> appIdStore;
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.ResourceIdStore"
+     */
+    private ResourceIdStore<App> appIdStore;
 
- /**
-  * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.ResourceIdStore"
-  */
-  private ResourceIdStore<Key> keyIdStore;
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.ResourceIdStore"
+     */
+    private ResourceIdStore<Key> keyIdStore;
 
-  /**
-   * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.AppUploadPackager"
-   */
-  private AppUploadPackager appUploadPackager;
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.AppUploadPackager"
+     */
+    private AppUploadPackager appUploadPackager;
 
-  /**
-   * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.AppDownloader"
-   */
-  private AppDownloader appDownloader;
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.AppDownloader"
+     */
+    private AppDownloader appDownloader;
 
-  /**
-   * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.IOsKeyManager"
-   */
-  private IOsKeyManager iOsKeyManager;
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.IOsKeyManager"
+     */
+    private IOsKeyManager iOsKeyManager;
 
-  /**
-   * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.AndroidKeyManager"
-   */
-  private AndroidKeyManager androidKeyManager;
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.plugin.utils.AndroidKeyManager"
+     */
+    private AndroidKeyManager androidKeyManager;
 
+    /**
+     * @component role="com.github.chrisprice.phonegapbuild.api.managers.KeysManager"
+     * @required
+     * @readonly
+     */
+    protected KeysManager keysManager;
 
-  /**
-   * @component role="com.github.chrisprice.phonegapbuild.api.managers.KeysManager"
-   * @required
-   * @readonly
-   */
-  protected KeysManager keysManager;
+    /**
+     * A ready-to-upload zip file in case you want to control package content. Thus, you can filter some resources like
+     * the config.xml before uploading to PhoneGap.
+     *
+     * @parameter
+     */
+    private File preparedPackage;
 
-  /**
-   * A ready-to-upload zip file in case you want to control package content.
-   * Thus, you can filter some resources like the config.xml before uploading to PhoneGap.
-   * 
-   * @parameter
-   */
-  private File preparedPackage;
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        ensureWorkingDirectory();
 
-  public void execute() throws MojoExecutionException, MojoFailureException {
-    ensureWorkingDirectory();
+        File appSource = preparedPackage;
 
-    File appSource = preparedPackage;
-    
-    if ( null == preparedPackage ) {
-        getLog().debug("Creating zip for upload to cloud.");
-        
-        appUploadPackager.setConfigFile(configFile);
-        appUploadPackager.setWarDirectory(warDirectory);
-        appUploadPackager.setWarExcludes(warExcludes);
-        appUploadPackager.setWarIncludes(warIncludes);
-        appUploadPackager.setWorkingDirectory(workingDirectory);
-        appUploadPackager.setZipFile(zipFile);
-        
-        appSource = appUploadPackager.createUploadPackage();
-    } else {
-        getLog().debug("Using prepared zip for upload to cloud.");
-    }
+        if (null == preparedPackage) {
+            getLog().debug("Creating zip for upload to cloud.");
 
-    getLog().debug("Authenticating.");
-    WebResource webResource = getRootWebResource();
+            appUploadPackager.setConfigFile(configFile);
+            appUploadPackager.setWarDirectory(warDirectory);
+            appUploadPackager.setWarExcludes(warExcludes);
+            appUploadPackager.setWarIncludes(warIncludes);
+            appUploadPackager.setWorkingDirectory(workingDirectory);
+            appUploadPackager.setZipFile(zipFile);
 
-    getLog().debug("Requesting summary from cloud.");
-    MeResponse me = meManager.requestMe(webResource);
-
-    getLog().debug("Checking for existing app.");
-    appIdStore.setAlias("app");
-    appIdStore.setWorkingDirectory(workingDirectory);
-    appIdStore.setIdOverride(this.appId);
-    HasResourceIdAndPath<App> appSummary = appIdStore.load(me.getApps().getAll());
-
-    ResourceId<Key> computedIOsKeyId = null;
-    ResourceId<Key> computedAndroidKeyId = null;
-
-    getLog().debug("Ensuring ios key exists if it is a target platform.");
-    if (targetPlatformsContains(Platform.IOS)) {
-      MePlatformResponse iosKeys = me.getKeys().getIos();
-      computedIOsKeyId = ensureIOsKey(webResource, iosKeys.getResourcePath(), iosKeys.getAll());
-    }
-
-    getLog().debug("Ensuring android key exists if it is a target platform and Android signing is enabled.");
-    if (targetPlatformsContains(Platform.ANDROID) && androidSign) {
-      MePlatformResponse androidKeys = me.getKeys().getAndroid();
-      computedAndroidKeyId = ensureAndroidKey(webResource, androidKeys.getResourcePath(), androidKeys.getAll());
-    }
-
-    if (appSummary == null) {
-      appSummary = createApp(webResource, me, appSource, computedIOsKeyId, computedAndroidKeyId);
-    } else {
-      getLog().info("Starting upload to existing app id " + appSummary.getResourceId());
-      if (computedIOsKeyId != null || computedAndroidKeyId != null) {
-          getLog().info(String.format("Setting default iOS and Android keys - ios: %s, android: %s",
-              ObjectUtils.defaultIfNull(computedIOsKeyId, "N/A"),
-              ObjectUtils.defaultIfNull(computedAndroidKeyId, "N/A")));
-          final AppDetailsRequest appDetailsRequest = createAppDetailsRequest(computedIOsKeyId, computedAndroidKeyId);
-          appsManager.updateAppDetails(webResource, appSummary.getResourcePath(), appDetailsRequest);
+            appSource = appUploadPackager.createUploadPackage();
+        } else {
+            getLog().debug("Using prepared zip for upload to cloud.");
         }
-      appsManager.putApp(webResource, appSummary.getResourcePath(), null, appSource);
+
+        getLog().debug("Authenticating.");
+        WebResource webResource = getRootWebResource();
+
+        getLog().debug("Requesting summary from cloud.");
+        MeResponse me = meManager.requestMe(webResource);
+
+        getLog().debug("Checking for existing app.");
+        appIdStore.setAlias("app");
+        appIdStore.setWorkingDirectory(workingDirectory);
+        appIdStore.setIdOverride(this.appId);
+        HasResourceIdAndPath<App> appSummary = appIdStore.load(me.getApps().getAll());
+
+        ResourceId<Key> computedIOsKeyId = null;
+        ResourceId<Key> computedAndroidKeyId = null;
+
+        getLog().debug("Ensuring ios key exists if it is a target platform.");
+        if (targetPlatformsContains(Platform.IOS)) {
+            MePlatformResponse iosKeys = me.getKeys().getIos();
+            computedIOsKeyId = ensureIOsKey(webResource, iosKeys.getResourcePath(), iosKeys.getAll());
+        }
+
+        getLog().debug("Ensuring android key exists if it is a target platform and Android signing is enabled.");
+        if (targetPlatformsContains(Platform.ANDROID) && androidSign) {
+            MePlatformResponse androidKeys = me.getKeys().getAndroid();
+            computedAndroidKeyId = ensureAndroidKey(webResource, androidKeys.getResourcePath(), androidKeys.getAll());
+        }
+
+        if (appSummary == null) {
+            appSummary = createApp(webResource, me, appSource, computedIOsKeyId, computedAndroidKeyId);
+        } else {
+            getLog().info("Starting upload to existing app id " + appSummary.getResourceId());
+            if (computedIOsKeyId != null || computedAndroidKeyId != null) {
+                getLog().info(String.format("Setting default iOS and Android keys - ios: %s, android: %s",
+                        ObjectUtils.defaultIfNull(computedIOsKeyId, "N/A"),
+                        ObjectUtils.defaultIfNull(computedAndroidKeyId, "N/A")));
+                final AppDetailsRequest appDetailsRequest = createAppDetailsRequest(computedIOsKeyId,
+                        computedAndroidKeyId);
+                appsManager.updateAppDetails(webResource, appSummary.getResourcePath(), appDetailsRequest);
+            }
+            appsManager.putApp(webResource, appSummary.getResourcePath(), null, appSource);
+        }
+
+        getLog().info("Starting downloads.");
+        appDownloader.setProject(project);
+        appDownloader.setWorkingDirectory(workingDirectory);
+        appDownloader.downloadArtifacts(webResource, appSummary.getResourcePath(), Platform.get(platforms));
+
+        if (deleteAppInPhoneGapBuildAfterBuild) {
+            getLog().info("Deleting cloud app id " + appSummary.getResourceId());
+            appsManager.deleteApp(webResource, appSummary.getResourcePath());
+
+            me = meManager.requestMe(webResource);
+
+            keyIdStore.setAlias("ios-key");
+            keyIdStore.setWorkingDirectory(workingDirectory);
+            HasResourceIdAndPath<Key> iOsKey = keyIdStore.load(me.getKeys().getIos().getAll());
+
+            if (iOsKey != null) {
+                getLog().info("Deleting cloud ios key id " + iOsKey.getResourceId());
+                keysManager.deleteKey(webResource, iOsKey.getResourcePath());
+            }
+
+            keyIdStore.setAlias("android-key");
+            keyIdStore.setWorkingDirectory(workingDirectory);
+            HasResourceIdAndPath<Key> androidKey = keyIdStore.load(me.getKeys().getAndroid().getAll());
+
+            if (androidKey != null) {
+                getLog().info("Deleting cloud android key id " + androidKey.getResourceId());
+                keysManager.deleteKey(webResource, androidKey.getResourcePath());
+            }
+        }
     }
 
-    getLog().info("Starting downloads.");
-    appDownloader.setProject(project);
-    appDownloader.setWorkingDirectory(workingDirectory);
-    appDownloader.downloadArtifacts(webResource, appSummary.getResourcePath(), Platform.get(platforms));
+    private HasResourceIdAndPath<App> createApp(WebResource webResource, MeResponse me, File appSource,
+            ResourceId<Key> computedIOsKeyId, ResourceId<Key> computedAndroidKeyId)
+            throws MojoExecutionException, MojoFailureException {
+        HasResourceIdAndPath<App> appSummary;
 
-    if (deleteAppInPhoneGapBuildAfterBuild) {
-      getLog().info("Deleting cloud app id " + appSummary.getResourceId());
-      appsManager.deleteApp(webResource, appSummary.getResourcePath());
+        getLog().debug("Building upload request.");
+        AppDetailsRequest appDetailsRequest = createAppDetailsRequest(computedIOsKeyId, computedAndroidKeyId);
 
-      me = meManager.requestMe(webResource);
+        getLog().info("Starting upload.");
+        appSummary = appsManager.postNewApp(webResource, me.getApps().getResourcePath(), appDetailsRequest,
+                appSource);
 
-      keyIdStore.setAlias("ios-key");
-      keyIdStore.setWorkingDirectory(workingDirectory);
-      HasResourceIdAndPath<Key> iOsKey = keyIdStore.load(me.getKeys().getIos().getAll());
-
-      if (iOsKey != null) {
-        getLog().info("Deleting cloud ios key id " + iOsKey.getResourceId());
-        keysManager.deleteKey(webResource, iOsKey.getResourcePath());
-      }
-
-      keyIdStore.setAlias("android-key");
-      keyIdStore.setWorkingDirectory(workingDirectory);
-      HasResourceIdAndPath<Key> androidKey = keyIdStore.load(me.getKeys().getAndroid().getAll());
-
-      if (androidKey != null) {
-        getLog().info("Deleting cloud android key id " + androidKey.getResourceId());
-        keysManager.deleteKey(webResource, androidKey.getResourcePath());
-      }
+        getLog().info("Storing new app id " + appSummary.getResourceId());
+        appIdStore.save(appSummary.getResourceId());
+        return appSummary;
     }
-  }
 
-  private HasResourceIdAndPath<App> createApp(WebResource webResource, MeResponse me, File appSource,
-      ResourceId<Key> computedIOsKeyId, ResourceId<Key> computedAndroidKeyId)
-      throws MojoExecutionException, MojoFailureException {
-    HasResourceIdAndPath<App> appSummary;
-
-    getLog().debug("Building upload request.");
-    AppDetailsRequest appDetailsRequest = createAppDetailsRequest(computedIOsKeyId, computedAndroidKeyId);
-
-    getLog().info("Starting upload.");
-    appSummary = appsManager.postNewApp(webResource, me.getApps().getResourcePath(), appDetailsRequest, 
-        appSource);
-
-    getLog().info("Storing new app id " + appSummary.getResourceId());
-    appIdStore.save(appSummary.getResourceId());
-    return appSummary;
-  }
-
-  private ResourceId<Key> ensureAndroidKey(WebResource webResource, ResourcePath<PlatformKeys> resourcePath,
-      MeKeyResponse[] all) throws MojoFailureException {
-    androidKeyManager.setAndroidCertificateAlias(androidCertificateAlias);
-    androidKeyManager.setAndroidCertificatePassword(androidCertificatePassword);
-    androidKeyManager.setAndroidKeyId(androidKeyId);
-    androidKeyManager.setAndroidKeystore(androidKeystore);
-    androidKeyManager.setAndroidKeystorePassword(androidKeystorePassword);
-    androidKeyManager.setAndroidServer(androidServer);
-    androidKeyManager.setAppTitle(appTitle);
-    androidKeyManager.setLog(getLog());
-    androidKeyManager.setWorkingDirectory(workingDirectory);
-    return androidKeyManager.ensureAndroidKey(webResource, resourcePath, all);
-  }
-
-  private ResourceId<Key> ensureIOsKey(WebResource webResource,
-      ResourcePath<PlatformKeys> resourcePath, MeKeyResponse[] all) throws MojoExecutionException,
-      MojoFailureException {
-    iOsKeyManager.setAppTitle(appTitle);
-    iOsKeyManager.setKeys(keys);
-    iOsKeyManager.setiOsCertificate(iOsCertificate);
-    iOsKeyManager.setiOsCertificatePassword(iOsCertificatePassword);
-    iOsKeyManager.setiOsKeyId(iOsKeyId);
-    iOsKeyManager.setiOsMobileProvision(iOsMobileProvision);
-    iOsKeyManager.setiOsServer(iOsServer);
-    iOsKeyManager.setLog(getLog());
-    iOsKeyManager.setProject(project);
-    iOsKeyManager.setWorkingDirectory(workingDirectory);
-    return iOsKeyManager.ensureIOsKey(webResource, resourcePath, all);
-  }
-
-  private void ensureWorkingDirectory() {
-    if (!workingDirectory.exists()) {
-      if (!workingDirectory.mkdirs()) {
-        throw new RuntimeException("Could not create working directory at "
-            + workingDirectory.getAbsolutePath() + ".");
-      }
-    } else {
-      if (!workingDirectory.isDirectory()) {
-        throw new RuntimeException("Working directory is not a directory "
-            + workingDirectory.getAbsolutePath() + ".");
-      }
+    private ResourceId<Key> ensureAndroidKey(WebResource webResource, ResourcePath<PlatformKeys> resourcePath,
+            MeKeyResponse[] all) throws MojoFailureException {
+        androidKeyManager.setAndroidCertificateAlias(androidCertificateAlias);
+        androidKeyManager.setAndroidCertificatePassword(androidCertificatePassword);
+        androidKeyManager.setAndroidKeyId(androidKeyId);
+        androidKeyManager.setAndroidKeystore(androidKeystore);
+        androidKeyManager.setAndroidKeystorePassword(androidKeystorePassword);
+        androidKeyManager.setAndroidServer(androidServer);
+        androidKeyManager.setAppTitle(appTitle);
+        androidKeyManager.setLog(getLog());
+        androidKeyManager.setWorkingDirectory(workingDirectory);
+        return androidKeyManager.ensureAndroidKey(webResource, resourcePath, all);
     }
-  }
 
-  private boolean targetPlatformsContains(Platform platform) {
-    return Arrays.asList(platforms).contains(platform.getValue());
-  }
-
-  private AppDetailsRequest createAppDetailsRequest(ResourceId<Key> iOsKeyId, ResourceId<Key> androidKeyId) {
-    AppDetailsRequest appDetailsRequest = new AppDetailsRequest();
-    appDetailsRequest.setCreateMethod("file");
-    appDetailsRequest.setTitle(appTitle);
-    AppDetailsRequest.Keys keys = new AppDetailsRequest.Keys();
-    if (iOsKeyId != null) {
-      keys.setIos(iOsKeyId.getId());
+    private ResourceId<Key> ensureIOsKey(WebResource webResource,
+            ResourcePath<PlatformKeys> resourcePath, MeKeyResponse[] all) throws MojoExecutionException,
+            MojoFailureException {
+        iOsKeyManager.setAppTitle(appTitle);
+        iOsKeyManager.setKeys(keys);
+        iOsKeyManager.setiOsCertificate(iOsCertificate);
+        iOsKeyManager.setiOsCertificatePassword(iOsCertificatePassword);
+        iOsKeyManager.setiOsKeyId(iOsKeyId);
+        iOsKeyManager.setiOsMobileProvision(iOsMobileProvision);
+        iOsKeyManager.setiOsServer(iOsServer);
+        iOsKeyManager.setLog(getLog());
+        iOsKeyManager.setProject(project);
+        iOsKeyManager.setWorkingDirectory(workingDirectory);
+        return iOsKeyManager.ensureIOsKey(webResource, resourcePath, all);
     }
-    if (androidKeyId != null) {
-      keys.setAndroid(androidKeyId.getId());
+
+    private void ensureWorkingDirectory() {
+        if (!workingDirectory.exists()) {
+            if (!workingDirectory.mkdirs()) {
+                throw new RuntimeException("Could not create working directory at "
+                        + workingDirectory.getAbsolutePath() + ".");
+            }
+        } else {
+            if (!workingDirectory.isDirectory()) {
+                throw new RuntimeException("Working directory is not a directory "
+                        + workingDirectory.getAbsolutePath() + ".");
+            }
+        }
     }
-    appDetailsRequest.setKeys(keys);
-    appDetailsRequest.setDebug(debug);
-    return appDetailsRequest;
-  }
 
-  public void setProject(MavenProject project) {
-    this.project = project;
-  }
+    private boolean targetPlatformsContains(Platform platform) {
+        return Arrays.asList(platforms).contains(platform.getValue());
+    }
 
-  public void setConfigFile(File configFile) {
-    this.configFile = configFile;
-  }
-  
-   public void setZipFile(String zipFile) {
-    this.zipFile = zipFile;
-  }
+    private AppDetailsRequest createAppDetailsRequest(ResourceId<Key> iOsKeyId, ResourceId<Key> androidKeyId) {
+        AppDetailsRequest appDetailsRequest = new AppDetailsRequest();
+        appDetailsRequest.setCreateMethod("file");
+        appDetailsRequest.setTitle(appTitle);
+        AppDetailsRequest.Keys keys = new AppDetailsRequest.Keys();
+        if (iOsKeyId != null) {
+            keys.setIos(iOsKeyId.getId());
+        }
+        if (androidKeyId != null) {
+            keys.setAndroid(androidKeyId.getId());
+        }
+        appDetailsRequest.setKeys(keys);
+        appDetailsRequest.setDebug(debug);
+        return appDetailsRequest;
+    }
 
-  public void setWorkingDirectory(File workingDirectory) {
-    this.workingDirectory = workingDirectory;
-  }
+    public void setProject(MavenProject project) {
+        this.project = project;
+    }
 
-  public void setAppTitle(String appTitle) {
-    this.appTitle = appTitle;
-  }
+    public void setConfigFile(File configFile) {
+        this.configFile = configFile;
+    }
 
-  public void setWarDirectory(File warDirectory) {
-    this.warDirectory = warDirectory;
-  }
+    public void setZipFile(String zipFile) {
+        this.zipFile = zipFile;
+    }
 
-  public void setWarIncludes(String[] includes) {
-    this.warIncludes = includes;
-  }
+    public void setWorkingDirectory(File workingDirectory) {
+        this.workingDirectory = workingDirectory;
+    }
 
-  public void setWarExcludes(String[] excludes) {
-    this.warExcludes = excludes;
-  }
+    public void setAppTitle(String appTitle) {
+        this.appTitle = appTitle;
+    }
 
-  public void setiOsCertificate(File iOsCertificate) {
-    this.iOsCertificate = iOsCertificate;
-  }
+    public void setWarDirectory(File warDirectory) {
+        this.warDirectory = warDirectory;
+    }
 
-  public void setiOsCertificatePassword(String iOsCertificatePassword) {
-    this.iOsCertificatePassword = iOsCertificatePassword;
-  }
+    public void setWarIncludes(String[] includes) {
+        this.warIncludes = includes;
+    }
 
-  public void setiOsMobileProvision(File iOsMobileProvision) {
-    this.iOsMobileProvision = iOsMobileProvision;
-  }
+    public void setWarExcludes(String[] excludes) {
+        this.warExcludes = excludes;
+    }
 
-  public void setKeys(String keys) {
-    this.keys = keys;
-  }
+    public void setiOsCertificate(File iOsCertificate) {
+        this.iOsCertificate = iOsCertificate;
+    }
 
-  public void setPlatforms(String[] platforms) {
-    this.platforms = platforms;
-  }
+    public void setiOsCertificatePassword(String iOsCertificatePassword) {
+        this.iOsCertificatePassword = iOsCertificatePassword;
+    }
 
-  public void setAppIdStore(ResourceIdStore<App> appIdStore) {
-    this.appIdStore = appIdStore;
-  }
+    public void setiOsMobileProvision(File iOsMobileProvision) {
+        this.iOsMobileProvision = iOsMobileProvision;
+    }
 
-  public void setiOsKeyManager(IOsKeyManager iOsKeyManager) {
-    this.iOsKeyManager = iOsKeyManager;
-  }
+    public void setKeys(String keys) {
+        this.keys = keys;
+    }
+
+    public void setPlatforms(String[] platforms) {
+        this.platforms = platforms;
+    }
+
+    public void setAppIdStore(ResourceIdStore<App> appIdStore) {
+        this.appIdStore = appIdStore;
+    }
+
+    public void setiOsKeyManager(IOsKeyManager iOsKeyManager) {
+        this.iOsKeyManager = iOsKeyManager;
+    }
 }

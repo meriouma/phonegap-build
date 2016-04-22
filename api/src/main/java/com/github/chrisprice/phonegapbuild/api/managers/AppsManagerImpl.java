@@ -2,6 +2,8 @@ package com.github.chrisprice.phonegapbuild.api.managers;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 

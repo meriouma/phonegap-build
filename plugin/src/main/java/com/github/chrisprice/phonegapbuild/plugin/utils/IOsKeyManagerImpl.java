@@ -78,55 +78,58 @@ public class IOsKeyManagerImpl implements IOsKeyManager {
     keyIdStore.setAlias("ios-key");
     keyIdStore.setWorkingDirectory(workingDirectory);
     keyIdStore.setIdOverride(iOsKeyId);
+
     HasResourceIdAndPath<Key> iOsKey = keyIdStore.load(keyResources);
 
-    // this should be handled by BuildMojo (it's global across all key management)
-    if (keys != null) {
-      getLog().debug("Fetching keys dependencies");
-      fetchKeys.setIncludes(keys);
-      fetchKeys.setProject(project);
-      fetchKeys.setTargetDirectory(workingDirectory);
-      fetchKeys.execute();
-    }
+    if (iOsKey == null) {
+      // this should be handled by BuildMojo (it's global across all key management)
+      if (keys != null) {
+        getLog().debug("Fetching keys dependencies");
+        fetchKeys.setIncludes(keys);
+        fetchKeys.setProject(project);
+        fetchKeys.setTargetDirectory(workingDirectory);
+        fetchKeys.execute();
+      }
 
-    File iOsCertificate;
-    String iOsCertificatePassword;
+      File iOsCertificate;
+      String iOsCertificatePassword;
 
-    if (iOsServer != null) {
-      AuthenticationInfo info = wagonManager.getAuthenticationInfo(iOsServer);
-      if (info == null) {
-        throw new RuntimeException("Server not found in settings.xml " + iOsServer + ".");
+      if (iOsServer != null) {
+        AuthenticationInfo info = wagonManager.getAuthenticationInfo(iOsServer);
+        if (info == null) {
+          throw new RuntimeException("Server not found in settings.xml " + iOsServer + ".");
+        }
+        if (info.getPrivateKey() == null) {
+          throw new RuntimeException("No private key found for server " + iOsServer + ".");
+        }
+        iOsCertificate = new File(info.getPrivateKey());
+        if (info.getPassphrase() == null) {
+          throw new RuntimeException("No passphrase found for server " + iOsServer + ".");
+        }
+        iOsCertificatePassword = info.getPassphrase();
+      } else {
+        getLog().warn(
+                "iOsServer not specified, falling back to iOsCertificate/iOsCertificatePassword.");
+        iOsCertificate = this.iOsCertificate;
+        iOsCertificatePassword = this.iOsCertificatePassword;
       }
-      if (info.getPrivateKey() == null) {
-        throw new RuntimeException("No private key found for server " + iOsServer + ".");
+
+      if (iOsCertificate == null || !iOsCertificate.exists()) {
+        String path = iOsCertificate == null ? null : iOsCertificate.getAbsolutePath();
+        throw new MojoFailureException("ios certificate does not exist " + path + ".");
       }
-      iOsCertificate = new File(info.getPrivateKey());
-      if (info.getPassphrase() == null) {
-        throw new RuntimeException("No passphrase found for server " + iOsServer + ".");
+
+      if (iOsCertificatePassword == null || iOsCertificatePassword.isEmpty()) {
+        throw new MojoFailureException("ios certificate password not defined or blank.");
       }
-      iOsCertificatePassword = info.getPassphrase();
     } else {
-      getLog().warn(
-          "iOsServer not specified, falling back to iOsCertificate/iOsCertificatePassword.");
-      iOsCertificate = this.iOsCertificate;
-      iOsCertificatePassword = this.iOsCertificatePassword;
-    }
-
-    if (iOsCertificate == null || !iOsCertificate.exists()) {
-      String path = iOsCertificate == null ? null : iOsCertificate.getAbsolutePath();
-      throw new MojoFailureException("ios certificate does not exist " + path + ".");
-    }
-
-    if (iOsCertificatePassword == null || iOsCertificatePassword.isEmpty()) {
-      throw new MojoFailureException("ios certificate password not defined or blank.");
-    }
-
-    if (iOsKey != null) {
-      getLog().debug("Unlocking existing ios key.");
-      IOsKeyUnlockRequest iOsKeyUnlockRequest = new IOsKeyUnlockRequest();
-      iOsKeyUnlockRequest.setPassword(iOsCertificatePassword);
-      keysManager.unlockKey(webResource, iOsKey.getResourcePath(), iOsKeyUnlockRequest);
-      getLog().debug("Key unlocked.");
+      if (iOsCertificatePassword != null) {
+        getLog().debug("Unlocking existing ios key.");
+        IOsKeyUnlockRequest iOsKeyUnlockRequest = new IOsKeyUnlockRequest();
+        iOsKeyUnlockRequest.setPassword(iOsCertificatePassword);
+        keysManager.unlockKey(webResource, iOsKey.getResourcePath(), iOsKeyUnlockRequest);
+        getLog().debug("Key unlocked.");
+      }
       return iOsKey.getResourceId();
     }
 
